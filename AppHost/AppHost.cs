@@ -2,8 +2,14 @@ using Aspire.Hosting.ApplicationModel;
 
 var builder = DistributedApplication.CreateBuilder(args);
 
-// Host folder that holds database files and logs
-const string fsRoot = "/Users/sarath/workspace/2027/eshop/fs";
+// Host folder that holds database files, logs and notebooks.
+// Set "FsRoot" in appsettings.Development.json (or env var FsRoot); defaults to ../fs next to this project.
+var fsRoot = Path.GetFullPath(
+    builder.Configuration["FsRoot"] ?? Path.Combine(builder.AppHostDirectory, "..", "fs"));
+foreach (var dir in new[] { "mysql/data", "mysql/logs", "postgres/data", "postgres/logs", "jupyter/work" })
+{
+    Directory.CreateDirectory(Path.Combine(fsRoot, dir));
+}
 
 // Fixed passwords (from appsettings.Development.json) so persisted data dirs keep working across runs
 var mysqlPassword = builder.AddParameter("mysql-password", secret: true);

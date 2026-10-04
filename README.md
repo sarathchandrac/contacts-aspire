@@ -19,6 +19,74 @@ Superset ──► PostgreSQL (metadata) + both databases for charts
 Jupyter  ──► both databases
 ```
 
+## Quick start (install and start)
+
+macOS with [Homebrew](https://brew.sh) assumed. Steps 1-2 are one-time setup.
+
+**1. Install the prerequisites**
+
+```bash
+brew install --cask dotnet-sdk docker     # .NET 10 SDK and Docker Desktop
+brew install uv python                    # Python tooling
+dotnet tool install -g Aspire.Cli --version 13.6.0   # optional: the `aspire` command
+echo 'export PATH="$PATH:$HOME/.dotnet/tools"' >> ~/.zshrc && source ~/.zshrc
+```
+
+Open **Docker Desktop** once, accept its prompts and wait until it says it is running. It must be version 25 or newer
+(`docker version --format '{{.Client.Version}}'`). Optionally trust the HTTPS dev certificate:
+`dotnet dev-certs https --trust`.
+
+**2. Get the code and configure it**
+
+```bash
+git clone https://github.com/sarathchandrac/contacts-aspire.git
+cd contacts-aspire
+cp AppHost/appsettings.Development.example.json AppHost/appsettings.Development.json
+```
+
+Edit `AppHost/appsettings.Development.json`:
+- replace every `CHANGE_ME` with your own password / token (Superset's secret key should be a long random string);
+- `FsRoot` is where database files, logs and notebooks are stored. The default `../fs` is a folder next to the project.
+  Set an absolute path to keep the data elsewhere.
+
+Choose the passwords **before the first start**: the databases keep them on disk, so changing a password later means wiping that database's data folder.
+
+**3. Start all services**
+
+```bash
+aspire run                                   # with the Aspire CLI
+# or, without the CLI:
+cd AppHost && dotnet run --launch-profile http
+```
+
+The first start takes a few minutes (it pulls images, builds the Superset and Jupyter images and installs Python packages).
+Watch the console for the dashboard `Login URL`, open it, and wait until every resource shows **Running**.
+
+**4. Open the services**
+
+| What | Where |
+|---|---|
+| Aspire dashboard | http://localhost:15170 (use the `Login URL` from the console) |
+| Frontend and API | the `frontend` and `api` links in the dashboard's URLs column |
+| Superset | http://localhost:8088 (user `admin`, password from your settings file) |
+| Jupyter | http://localhost:8889/?token=*your-jupyter-token* |
+
+**5. Create the starter Superset dashboard (optional)**
+
+With Superset running, register the data and build the dashboard:
+
+```bash
+python3 superset/create_dashboard.py
+```
+
+Open http://localhost:8088/superset/dashboard/1/. The Jupyter notebook `analytics_overview.ipynb` (in `jupyter/`) shows the same
+analytics; copy it to `<FsRoot>/jupyter/work/` to open it in JupyterLab.
+
+**6. Stop**
+
+Press **Ctrl+C** in the terminal running Aspire (or `aspire stop`). The MySQL and PostgreSQL containers are persistent;
+see [Stop, restart and clean up](#stop-restart-and-clean-up) to stop them as well.
+
 ## Prerequisites
 
 | Tool | Version | Check |
@@ -50,8 +118,8 @@ superset/                   Superset image, config, bootstrap, create_dashboard.
 jupyter/                    Jupyter image + copy of the analytics notebook
 ```
 
-Persistent data and logs are bind-mounted to the host under `/Users/sarath/workspace/2027/eshop/fs`
-(change `fsRoot` in `AppHost/AppHost.cs` to relocate it):
+Persistent data and logs are bind-mounted to the host under `FsRoot` from `AppHost/appsettings.Development.json`
+(default `fs/` next to the project; the folders are created automatically and git-ignored):
 
 ```
 fs/mysql/data      fs/mysql/logs       (error.log, general.log, slow.log)
@@ -64,14 +132,14 @@ fs/jupyter/work                        (notebooks)
 Option A: Aspire CLI
 
 ```bash
-cd /Users/sarath/skills/inventory/contacts-aspire
+cd contacts-aspire
 aspire run
 ```
 
 Option B: plain .NET (no CLI needed)
 
 ```bash
-cd /Users/sarath/skills/inventory/contacts-aspire/AppHost
+cd contacts-aspire/AppHost
 dotnet run --launch-profile http
 ```
 
@@ -194,6 +262,7 @@ Data survives restarts because it lives in `fs/`. To wipe a database, stop its c
 |---|---|
 | `No trusted development certificate was found` | Run `dotnet dev-certs https --trust`, or use the `http` launch profile. |
 | `Container runtime 'docker' ... unhealthy` | Docker Desktop isn't running, or its CLI is older than 25. Start/upgrade Docker, then restart Aspire. Check with `~/.nuget/packages/aspire.hosting.orchestration.osx-arm64/13.6.0/tools/dcp info`. |
+| `dotnet run` fails with `Parameter ... not found` | `AppHost/appsettings.Development.json` is missing or incomplete; create it from the `.example.json` file (Quick start, step 2). |
 | `aspire: command not found` | Add `$HOME/.dotnet/tools` to PATH (see Prerequisites), or use `dotnet run --launch-profile http`. |
 | `api` fails at `api-installer` | `pip install .` failed. Open the `api-installer` console log in the dashboard; both `pyproject.toml` files must list their modules under `[tool.setuptools] py-modules`. |
 | Frontend: "Could not load /contacts" | The API isn't ready or its database is down. Check the `api` logs in the dashboard. |

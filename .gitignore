@@ -20,3 +20,6 @@ AppHost/appsettings.Development.json
 .DS_Store
 .idea/
 .vscode/
+
+# Local data (database files, logs, notebooks)
+fs/
