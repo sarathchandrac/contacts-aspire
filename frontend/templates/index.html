@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contacts</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; color: #222; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: .6rem .8rem; border-bottom: 1px solid #e3e3e3; }
+    th { background: #f5f5f5; }
+    tr:hover td { background: #fafafa; }
+    .error { color: #b00020; }
+    h2 { margin-top: 2.5rem; }
+    small { color: #777; font-weight: normal; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; }
+  </style>
+</head>
+<body>
+  {% for e in errors %}<p class="error">Could not load {{ e }}</p>{% endfor %}
+
+  <h1>Contacts ({{ contacts|length }}) <small>MySQL</small></h1>
+  <table>
+    <thead><tr><th>Name</th><th>Phone</th><th>Email</th></tr></thead>
+    <tbody>
+    {% for c in contacts %}
+      <tr><td>{{ c.name }}</td><td>{{ c.phone }}</td><td><a href="mailto:{{ c.email }}">{{ c.email }}</a></td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  <h2>Users ({{ users|length }}) <small>PostgreSQL</small></h2>
+  <table>
+    <thead><tr><th>Username</th><th>Email</th><th>Role</th></tr></thead>
+    <tbody>
+    {% for u in users %}
+      <tr><td>{{ u.username }}</td><td>{{ u.email }}</td><td>{{ u.role }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+
+  {% if analytics %}
+  <h2>Analytics <small>PostgreSQL &middot; {{ analytics.total_events }} events</small></h2>
+  <div class="grid">
+    <div><h3>By event type</h3><table>
+      {% for r in analytics.by_type %}<tr><td>{{ r.event_type }}</td><td>{{ r.count }}</td></tr>{% endfor %}
+    </table></div>
+    <div><h3>By page</h3><table>
+      {% for r in analytics.by_page %}<tr><td>{{ r.page }}</td><td>{{ r.count }}</td></tr>{% endfor %}
+    </table></div>
+    <div><h3>Top users</h3><table>
+      {% for r in analytics.top_users %}<tr><td>{{ r.username }}</td><td>{{ r.count }}</td></tr>{% endfor %}
+    </table></div>
+  </div>
+  {% endif %}
+</body>
+</html>

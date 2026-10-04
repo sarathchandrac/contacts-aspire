@@ -1,0 +1,22 @@
+# .NET build output
+bin/
+obj/
+*.user
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+build/
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Local dev secrets (passwords / tokens) -- copy appsettings.Development.example.json to create it
+AppHost/appsettings.Development.json
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
