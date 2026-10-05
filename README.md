@@ -237,6 +237,18 @@ Inside containers (Superset, Jupyter) use `mysql.dev.internal:3306` and `postgre
 
 - Jupyter is published on host port **8889** because 8888 is commonly used by a locally installed Jupyter.
 
+## Check that everything is running
+
+```bash
+docker ps --format '{{.Names}}  {{.Status}}'      # mysql-*, postgres-*, superset-*, jupyter-* should be Up
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8088/health    # Superset: 200
+curl -s -o /dev/null -w '%{http_code}\n' http://localhost:8889/api       # Jupyter: 200
+```
+
+Use the dashboard's URLs column for the API, frontend and database ports (they change on every run), then check the API with
+`curl -sk https://localhost:<api-port>/contacts` (use `-k` because the dev certificate is self-signed).
+All checks pass when `/contacts`, `/users` and `/analytics` return 200.
+
 ## Stop, restart and clean up
 
 Stop everything: press **Ctrl+C** in the terminal running Aspire, or from any terminal:
@@ -253,8 +265,9 @@ docker ps --format '{{.Names}}' | grep -E '^(mysql|postgres)-'   # find the name
 docker stop <mysql-container> <postgres-container>
 ```
 
-Data survives restarts because it lives in `fs/`. To wipe a database, stop its container and delete the folder contents
-(for example `fs/mysql/data/*`).
+Data survives restarts because it lives in `fs/`. If the containers were killed (for example by a Docker crash), MySQL and
+PostgreSQL run crash recovery on the next start, so that first start can take a little longer. To wipe a database, stop its
+container and delete the folder contents (for example `fs/mysql/data/*`).
 
 ## Troubleshooting
 
@@ -268,6 +281,8 @@ Data survives restarts because it lives in `fs/`. To wipe a database, stop its c
 | Frontend: "Could not load /contacts" | The API isn't ready or its database is down. Check the `api` logs in the dashboard. |
 | Superset MySQL query: `No module named MySQLdb` | `superset/superset_config.py` must call `pymysql.install_as_MySQLdb()`; rebuild the image by restarting Aspire. |
 | Jupyter doesn't start, port in use | Something else holds 8889. Change the host port in `AppHost.cs` (`WithHttpEndpoint(port: 8889, ...)`). |
+| Old `superset-*` / `jupyter-*` containers show as `Exited` | Leftovers from an earlier run or a Docker crash. They are harmless; remove them with `docker container prune` (it only removes stopped containers). |
+| `docker stop` of several containers fails with `404 page not found` | Stop them one at a time (`docker stop <name>` for each). |
 | Docker API returns 500 / `docker ps` hangs | Docker Desktop engine is overloaded or hung. Restart Docker Desktop (force-quit if needed), raise its memory limit, then restart Aspire. |
 | Aspire warns `Failed to persist public port` | Harmless. Run `dotnet user-secrets init` in `AppHost/` to remove the warning. |
 | Database container exits at startup | Check its logs in the dashboard. Bind-mounted folders under `fs/` must be writable. |
